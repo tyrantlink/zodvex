@@ -289,8 +289,8 @@ function zodToConvexInternal<Z extends z.ZodTypeAny>(
     }
   }
 
-  // For optional or default fields, always use v.optional()
-  const finalValidator = isOptional || hasDefault ? v.optional(convexValidator) : convexValidator
+  // Only make it optional if it's defined as optional (rage)
+  const finalValidator = isOptional ? v.optional(convexValidator) : convexValidator
 
   // Add metadata if there's a default value
   if (hasDefault && typeof finalValidator === 'object' && finalValidator !== null) {
