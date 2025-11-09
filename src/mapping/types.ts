@@ -232,7 +232,7 @@ export type ConvexValidatorFromZodFieldsAuto<T extends { [key: string]: any }> =
   [K in keyof T]: T[K] extends z.ZodOptional<any>
     ? ConvexValidatorFromZod<T[K], 'optional'>
     : T[K] extends z.ZodDefault<any>
-      ? ConvexValidatorFromZod<T[K], 'optional'>
+      ? ConvexValidatorFromZod<T[K], 'required'>
       : T[K] extends z.ZodNullable<any>
         ? ConvexValidatorFromZod<T[K], 'required'>
         : T[K] extends z.ZodEnum<any>
