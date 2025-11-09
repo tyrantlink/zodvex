@@ -1,21 +1,21 @@
-import { z } from 'zod'
-import { zodToConvex } from './mapping'
-import { findBaseCodec, isDateSchema } from './registry'
+import { z } from "zod";
+import { zodToConvex } from "./mapping";
+import { findBaseCodec, isDateSchema } from "./registry";
 
 // Helper to convert Zod's internal types to ZodTypeAny
 function asZodType<T>(schema: T): z.ZodTypeAny {
-  return schema as unknown as z.ZodTypeAny
+  return schema as unknown as z.ZodTypeAny;
 }
 
 export type ConvexCodec<T> = {
-  validator: any
-  encode: (value: T) => any
-  decode: (value: any) => T
-  pick: <K extends keyof T>(keys: K[]) => ConvexCodec<Pick<T, K>>
-}
+  validator: any;
+  encode: (value: T) => any;
+  decode: (value: any) => T;
+  pick: <K extends keyof T>(keys: K[]) => ConvexCodec<Pick<T, K>>;
+};
 
 export function convexCodec<T>(schema: z.ZodType<T>): ConvexCodec<T> {
-  const validator = zodToConvex(schema)
+  const validator = zodToConvex(schema);
 
   return {
     validator,
@@ -23,94 +23,95 @@ export function convexCodec<T>(schema: z.ZodType<T>): ConvexCodec<T> {
     decode: (value: any) => fromConvexJS(value, schema),
     pick: <K extends keyof T>(keys: K[] | Record<K, true>) => {
       if (!(schema instanceof z.ZodObject)) {
-        throw new Error('pick() can only be called on object schemas')
+        throw new Error("pick() can only be called on object schemas");
       }
       // Handle both array and object formats
       const pickObj = Array.isArray(keys)
         ? keys.reduce((acc, k) => ({ ...acc, [k]: true }), {} as any)
-        : keys
-      const pickedSchema = schema.pick(pickObj as any)
-      return convexCodec(pickedSchema) as ConvexCodec<Pick<T, K>>
-    }
-  }
+        : keys;
+      const pickedSchema = schema.pick(pickObj as any);
+      return convexCodec(pickedSchema) as ConvexCodec<Pick<T, K>>;
+    },
+  };
 }
 
 // Convert JS values to Convex-safe JSON (handle Dates, remove undefined)
 export function toConvexJS(schema?: any, value?: any): any {
   // If no schema provided, do basic conversion
   if (!schema || arguments.length === 1) {
-    value = schema
-    return basicToConvex(value)
+    value = schema;
+    return basicToConvex(value);
   }
 
   // Use schema-aware conversion
-  return schemaToConvex(value, schema)
+  return schemaToConvex(value, schema);
 }
 
 function basicToConvex(value: any): any {
-  if (value === undefined) return undefined
-  if (value === null) return null
-  if (value instanceof Date) return value.getTime()
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (value instanceof Date) return value.getTime();
 
   if (Array.isArray(value)) {
-    return value.map(basicToConvex)
+    return value.map(basicToConvex);
   }
 
-  if (value && typeof value === 'object') {
-    const result: any = {}
+  if (value && typeof value === "object") {
+    const result: any = {};
     for (const [k, v] of Object.entries(value)) {
       if (v !== undefined) {
-        result[k] = basicToConvex(v)
+        result[k] = basicToConvex(v);
       }
     }
-    return result
+    return result;
   }
 
-  return value
+  return value;
 }
 
 function schemaToConvex(value: any, schema: any): any {
-  if (value === undefined || value === null) return value
+  if (value === undefined || value === null) return value;
 
   // Check base codec registry first
-  const codec = findBaseCodec(schema)
+  const codec = findBaseCodec(schema);
   if (codec) {
-    return codec.toConvex(value, schema)
+    return codec.toConvex(value, schema);
   }
 
   // Handle wrapper types
   if (
     schema instanceof z.ZodOptional ||
     schema instanceof z.ZodNullable ||
-    schema instanceof z.ZodDefault
+    schema instanceof z.ZodDefault ||
+    schema instanceof z.ZodPrefault
   ) {
     // Use unwrap() method which is available on these types
-    const inner = schema.unwrap()
-    return schemaToConvex(value, asZodType(inner))
+    const inner = schema.unwrap();
+    return schemaToConvex(value, asZodType(inner));
   }
 
   // Handle Date specifically
   if (schema instanceof z.ZodDate && value instanceof Date) {
-    return value.getTime()
+    return value.getTime();
   }
 
   // Handle arrays
   if (schema instanceof z.ZodArray) {
-    if (!Array.isArray(value)) return value
-    return value.map(item => schemaToConvex(item, schema.element))
+    if (!Array.isArray(value)) return value;
+    return value.map((item) => schemaToConvex(item, schema.element));
   }
 
   // Handle objects
   if (schema instanceof z.ZodObject) {
-    if (!value || typeof value !== 'object') return value
-    const shape = schema.shape
-    const result: any = {}
+    if (!value || typeof value !== "object") return value;
+    const shape = schema.shape;
+    const result: any = {};
     for (const [k, v] of Object.entries(value)) {
       if (v !== undefined) {
-        result[k] = shape[k] ? schemaToConvex(v, shape[k]) : basicToConvex(v)
+        result[k] = shape[k] ? schemaToConvex(v, shape[k]) : basicToConvex(v);
       }
     }
-    return result
+    return result;
   }
 
   // Handle unions
@@ -118,8 +119,8 @@ function schemaToConvex(value: any, schema: any): any {
     // Try each option to see which one matches
     for (const option of schema.options) {
       try {
-        ;(option as any).parse(value) // Validate against this option
-        return schemaToConvex(value, option)
+        (option as any).parse(value); // Validate against this option
+        return schemaToConvex(value, option);
       } catch {
         // Try next option
       }
@@ -128,66 +129,67 @@ function schemaToConvex(value: any, schema: any): any {
 
   // Handle records
   if (schema instanceof z.ZodRecord) {
-    if (!value || typeof value !== 'object') return value
-    const result: any = {}
+    if (!value || typeof value !== "object") return value;
+    const result: any = {};
     for (const [k, v] of Object.entries(value)) {
       if (v !== undefined) {
-        result[k] = schemaToConvex(v, schema.valueType)
+        result[k] = schemaToConvex(v, schema.valueType);
       }
     }
-    return result
+    return result;
   }
 
   // Default passthrough
-  return basicToConvex(value)
+  return basicToConvex(value);
 }
 
 // Convert Convex JSON back to JS values (handle timestamps -> Dates)
 export function fromConvexJS(value: any, schema: any): any {
-  if (value === undefined || value === null) return value
+  if (value === undefined || value === null) return value;
 
   // Check base codec registry first
-  const codec = findBaseCodec(schema)
+  const codec = findBaseCodec(schema);
   if (codec) {
-    return codec.fromConvex(value, schema)
+    return codec.fromConvex(value, schema);
   }
 
   // Handle wrapper types
   if (
     schema instanceof z.ZodOptional ||
     schema instanceof z.ZodNullable ||
-    schema instanceof z.ZodDefault
+    schema instanceof z.ZodDefault ||
+    schema instanceof z.ZodPrefault
   ) {
     // Use unwrap() method which is available on these types
-    const inner = schema.unwrap()
-    return fromConvexJS(value, asZodType(inner))
+    const inner = schema.unwrap();
+    return fromConvexJS(value, asZodType(inner));
   }
 
   // Handle Date specifically
-  if (schema instanceof z.ZodDate && typeof value === 'number') {
-    return new Date(value)
+  if (schema instanceof z.ZodDate && typeof value === "number") {
+    return new Date(value);
   }
 
   // Check if schema is a Date through effects/transforms
-  if (isDateSchema(schema) && typeof value === 'number') {
-    return new Date(value)
+  if (isDateSchema(schema) && typeof value === "number") {
+    return new Date(value);
   }
 
   // Handle arrays
   if (schema instanceof z.ZodArray) {
-    if (!Array.isArray(value)) return value
-    return value.map(item => fromConvexJS(item, schema.element))
+    if (!Array.isArray(value)) return value;
+    return value.map((item) => fromConvexJS(item, schema.element));
   }
 
   // Handle objects
   if (schema instanceof z.ZodObject) {
-    if (!value || typeof value !== 'object') return value
-    const shape = schema.shape
-    const result: any = {}
+    if (!value || typeof value !== "object") return value;
+    const shape = schema.shape;
+    const result: any = {};
     for (const [k, v] of Object.entries(value)) {
-      result[k] = shape[k] ? fromConvexJS(v, shape[k]) : v
+      result[k] = shape[k] ? fromConvexJS(v, shape[k]) : v;
     }
-    return result
+    return result;
   }
 
   // Handle unions
@@ -195,9 +197,9 @@ export function fromConvexJS(value: any, schema: any): any {
     // Try to decode with each option
     for (const option of schema.options) {
       try {
-        const decoded = fromConvexJS(value, option)
-        ;(option as any).parse(decoded) // Validate the decoded value
-        return decoded
+        const decoded = fromConvexJS(value, option);
+        (option as any).parse(decoded); // Validate the decoded value
+        return decoded;
       } catch {
         // Try next option
       }
@@ -206,20 +208,20 @@ export function fromConvexJS(value: any, schema: any): any {
 
   // Handle records
   if (schema instanceof z.ZodRecord) {
-    if (!value || typeof value !== 'object') return value
-    const result: any = {}
+    if (!value || typeof value !== "object") return value;
+    const result: any = {};
     for (const [k, v] of Object.entries(value)) {
-      result[k] = fromConvexJS(v, schema.valueType)
+      result[k] = fromConvexJS(v, schema.valueType);
     }
-    return result
+    return result;
   }
 
   // Handle effects and transforms
   // Note: ZodPipe doesn't exist in Zod v4, only ZodTransform
   if (schema instanceof z.ZodTransform) {
     // Cannot access inner schema without _def, return value as-is
-    return value
+    return value;
   }
 
-  return value
+  return value;
 }
