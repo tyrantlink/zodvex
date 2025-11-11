@@ -2,20 +2,14 @@ import type {
   FunctionVisibility,
   RegisteredAction,
   RegisteredMutation,
-  RegisteredQuery
-} from 'convex/server'
-import type { PropertyValidators } from 'convex/values'
-import type { Customization } from 'convex-helpers/server/customFunctions'
-import { z } from 'zod'
-import { type CustomBuilder, customFnBuilder } from './custom'
-import type {
-  ExtractCtx,
-  ExtractVisibility,
-  InferHandlerReturns,
-  InferReturns,
-  ZodToConvexArgs
-} from './types'
-import { zAction, zMutation, zQuery } from './wrappers'
+  RegisteredQuery,
+} from "convex/server";
+import type { PropertyValidators } from "convex/values";
+import type { Customization } from "convex-helpers/server/customFunctions";
+import { z } from "zod";
+import { type CustomBuilder, customFnBuilder } from "./custom";
+import type { ExtractCtx, ExtractVisibility, ZodToConvexArgs } from "./types";
+import { zAction, zMutation, zQuery } from "./wrappers";
 
 /**
  * Creates a reusable query builder from a Convex query builder.
@@ -38,27 +32,34 @@ import { zAction, zMutation, zQuery } from './wrappers'
  * })
  * ```
  */
-export function zQueryBuilder<Builder extends (fn: any) => any>(builder: Builder) {
-  return <
-    A extends z.ZodTypeAny | Record<string, z.ZodTypeAny>,
-    R extends z.ZodTypeAny | undefined = undefined,
-    Visibility extends FunctionVisibility = ExtractVisibility<Builder>
-  >(config: {
-    args?: A
-    handler: (
+export function zQueryBuilder<Builder extends (fn: any) => any>(
+  builder: Builder
+) {
+  return function <
+    A extends
+      | z.ZodTypeAny
+      | Record<string, z.ZodTypeAny>
+      | undefined = undefined,
+    H extends (
       ctx: ExtractCtx<Builder>,
       args: ZodToConvexArgs<A extends undefined ? Record<string, never> : A>
-    ) => InferHandlerReturns<R> | Promise<InferHandlerReturns<R>>
-    returns?: R
+    ) => any = (
+      ctx: ExtractCtx<Builder>,
+      args: ZodToConvexArgs<A extends undefined ? Record<string, never> : A>
+    ) => unknown,
+  >(config: {
+    args?: A;
+    handler: H;
+    returns?: z.ZodTypeAny;
   }): RegisteredQuery<
-    Visibility,
+    ExtractVisibility<Builder>,
     ZodToConvexArgs<A extends undefined ? Record<string, never> : A>,
-    Promise<InferReturns<R>>
-  > => {
+    Awaited<ReturnType<H>>
+  > {
     return zQuery(builder, config.args ?? ({} as any), config.handler, {
-      returns: config.returns
-    }) as any
-  }
+      returns: config.returns,
+    });
+  };
 }
 
 /**
@@ -82,27 +83,34 @@ export function zQueryBuilder<Builder extends (fn: any) => any>(builder: Builder
  * })
  * ```
  */
-export function zMutationBuilder<Builder extends (fn: any) => any>(builder: Builder) {
-  return <
-    A extends z.ZodTypeAny | Record<string, z.ZodTypeAny>,
-    R extends z.ZodTypeAny | undefined = undefined,
-    Visibility extends FunctionVisibility = ExtractVisibility<Builder>
-  >(config: {
-    args?: A
-    handler: (
+export function zMutationBuilder<Builder extends (fn: any) => any>(
+  builder: Builder
+) {
+  return function <
+    A extends
+      | z.ZodTypeAny
+      | Record<string, z.ZodTypeAny>
+      | undefined = undefined,
+    H extends (
       ctx: ExtractCtx<Builder>,
       args: ZodToConvexArgs<A extends undefined ? Record<string, never> : A>
-    ) => InferHandlerReturns<R> | Promise<InferHandlerReturns<R>>
-    returns?: R
+    ) => any = (
+      ctx: ExtractCtx<Builder>,
+      args: ZodToConvexArgs<A extends undefined ? Record<string, never> : A>
+    ) => unknown,
+  >(config: {
+    args?: A;
+    handler: H;
+    returns?: z.ZodTypeAny;
   }): RegisteredMutation<
-    Visibility,
+    ExtractVisibility<Builder>,
     ZodToConvexArgs<A extends undefined ? Record<string, never> : A>,
-    Promise<InferReturns<R>>
-  > => {
+    Awaited<ReturnType<H>>
+  > {
     return zMutation(builder, config.args ?? ({} as any), config.handler, {
-      returns: config.returns
-    }) as any
-  }
+      returns: config.returns,
+    });
+  };
 }
 
 /**
@@ -126,27 +134,34 @@ export function zMutationBuilder<Builder extends (fn: any) => any>(builder: Buil
  * })
  * ```
  */
-export function zActionBuilder<Builder extends (fn: any) => any>(builder: Builder) {
-  return <
-    A extends z.ZodTypeAny | Record<string, z.ZodTypeAny>,
-    R extends z.ZodTypeAny | undefined = undefined,
-    Visibility extends FunctionVisibility = ExtractVisibility<Builder>
-  >(config: {
-    args?: A
-    handler: (
+export function zActionBuilder<Builder extends (fn: any) => any>(
+  builder: Builder
+) {
+  return function <
+    A extends
+      | z.ZodTypeAny
+      | Record<string, z.ZodTypeAny>
+      | undefined = undefined,
+    H extends (
       ctx: ExtractCtx<Builder>,
       args: ZodToConvexArgs<A extends undefined ? Record<string, never> : A>
-    ) => InferHandlerReturns<R> | Promise<InferHandlerReturns<R>>
-    returns?: R
+    ) => any = (
+      ctx: ExtractCtx<Builder>,
+      args: ZodToConvexArgs<A extends undefined ? Record<string, never> : A>
+    ) => unknown,
+  >(config: {
+    args?: A;
+    handler: H;
+    returns?: z.ZodTypeAny;
   }): RegisteredAction<
-    Visibility,
+    ExtractVisibility<Builder>,
     ZodToConvexArgs<A extends undefined ? Record<string, never> : A>,
-    Promise<InferReturns<R>>
-  > => {
+    Awaited<ReturnType<H>>
+  > {
     return zAction(builder, config.args ?? ({} as any), config.handler, {
-      returns: config.returns
-    }) as any
-  }
+      returns: config.returns,
+    });
+  };
 }
 
 /**
@@ -183,12 +198,18 @@ export function zCustomQueryBuilder<
   CustomCtx extends Record<string, any>,
   CustomMadeArgs extends Record<string, any>,
   Visibility extends FunctionVisibility = ExtractVisibility<Builder>,
-  ExtraArgs extends Record<string, any> = Record<string, any>
+  ExtraArgs extends Record<string, any> = Record<string, any>,
 >(
   query: Builder,
-  customization: Customization<any, CustomArgsValidator, CustomCtx, CustomMadeArgs, ExtraArgs>
+  customization: Customization<
+    any,
+    CustomArgsValidator,
+    CustomCtx,
+    CustomMadeArgs,
+    ExtraArgs
+  >
 ): CustomBuilder<
-  'query',
+  "query",
   CustomArgsValidator,
   CustomCtx,
   CustomMadeArgs,
@@ -196,10 +217,14 @@ export function zCustomQueryBuilder<
   Visibility,
   ExtraArgs
 > {
-  return customFnBuilder<any, Builder, CustomArgsValidator, CustomCtx, CustomMadeArgs, ExtraArgs>(
-    query as any,
-    customization as any
-  ) as any
+  return customFnBuilder<
+    any,
+    Builder,
+    CustomArgsValidator,
+    CustomCtx,
+    CustomMadeArgs,
+    ExtraArgs
+  >(query as any, customization as any) as any;
 }
 
 /**
@@ -236,12 +261,18 @@ export function zCustomMutationBuilder<
   CustomCtx extends Record<string, any>,
   CustomMadeArgs extends Record<string, any>,
   Visibility extends FunctionVisibility = ExtractVisibility<Builder>,
-  ExtraArgs extends Record<string, any> = Record<string, any>
+  ExtraArgs extends Record<string, any> = Record<string, any>,
 >(
   mutation: Builder,
-  customization: Customization<any, CustomArgsValidator, CustomCtx, CustomMadeArgs, ExtraArgs>
+  customization: Customization<
+    any,
+    CustomArgsValidator,
+    CustomCtx,
+    CustomMadeArgs,
+    ExtraArgs
+  >
 ): CustomBuilder<
-  'mutation',
+  "mutation",
   CustomArgsValidator,
   CustomCtx,
   CustomMadeArgs,
@@ -249,10 +280,14 @@ export function zCustomMutationBuilder<
   Visibility,
   ExtraArgs
 > {
-  return customFnBuilder<any, Builder, CustomArgsValidator, CustomCtx, CustomMadeArgs, ExtraArgs>(
-    mutation as any,
-    customization as any
-  ) as any
+  return customFnBuilder<
+    any,
+    Builder,
+    CustomArgsValidator,
+    CustomCtx,
+    CustomMadeArgs,
+    ExtraArgs
+  >(mutation as any, customization as any) as any;
 }
 
 /**
@@ -290,12 +325,18 @@ export function zCustomActionBuilder<
   CustomCtx extends Record<string, any>,
   CustomMadeArgs extends Record<string, any>,
   Visibility extends FunctionVisibility = ExtractVisibility<Builder>,
-  ExtraArgs extends Record<string, any> = Record<string, any>
+  ExtraArgs extends Record<string, any> = Record<string, any>,
 >(
   action: Builder,
-  customization: Customization<any, CustomArgsValidator, CustomCtx, CustomMadeArgs, ExtraArgs>
+  customization: Customization<
+    any,
+    CustomArgsValidator,
+    CustomCtx,
+    CustomMadeArgs,
+    ExtraArgs
+  >
 ): CustomBuilder<
-  'action',
+  "action",
   CustomArgsValidator,
   CustomCtx,
   CustomMadeArgs,
@@ -303,8 +344,12 @@ export function zCustomActionBuilder<
   Visibility,
   ExtraArgs
 > {
-  return customFnBuilder<any, Builder, CustomArgsValidator, CustomCtx, CustomMadeArgs, ExtraArgs>(
-    action as any,
-    customization as any
-  ) as any
+  return customFnBuilder<
+    any,
+    Builder,
+    CustomArgsValidator,
+    CustomCtx,
+    CustomMadeArgs,
+    ExtraArgs
+  >(action as any, customization as any) as any;
 }

@@ -134,7 +134,7 @@ export function zQuery<
       // Fallback: ensure Convex-safe return values (e.g., Date → timestamp)
       return toConvexJS(raw) as any;
     },
-  }) as any;
+  });
 }
 
 export function zInternalQuery<
@@ -214,7 +214,7 @@ export function zMutation<
       // Fallback: ensure Convex-safe return values (e.g., Date → timestamp)
       return toConvexJS(raw) as any;
     },
-  }) as any;
+  });
 }
 
 export function zInternalMutation<
@@ -294,7 +294,7 @@ export function zAction<
       // Fallback: ensure Convex-safe return values (e.g., Date → timestamp)
       return toConvexJS(raw) as any;
     },
-  }) as any;
+  });
 }
 
 export function zInternalAction<
@@ -311,5 +311,5 @@ export function zInternalAction<
   ) => InferHandlerReturns<R> | Promise<InferHandlerReturns<R>>,
   options?: { returns?: R }
 ): RegisteredAction<Visibility, ZodToConvexArgs<A>, Promise<InferReturns<R>>> {
-  return zAction(internalAction, input, handler, options) as any;
+  return zAction(internalAction, input, handler, options);
 }
